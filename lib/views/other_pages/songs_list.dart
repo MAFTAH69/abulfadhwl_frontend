@@ -1,18 +1,16 @@
 import 'dart:io';
-
-import 'package:abulfadhwl_frontend/views/other_pages/now_playing_screen_sheet.dart';
 import 'package:dio/dio.dart';
-import 'package:downloads_path_provider/downloads_path_provider.dart';
-import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart';
-import 'package:abulfadhwl_frontend/api.dart';
-import 'package:abulfadhwl_frontend/constants/more_button_constants.dart';
-import 'package:abulfadhwl_frontend/models/album.dart';
-import 'package:abulfadhwl_frontend/models/song.dart';
-import 'package:abulfadhwl_frontend/providers/songs_provider.dart';
 import 'package:share/share.dart';
+import 'package:flutter/material.dart';
+import 'package:abulfadhwl_frontend/api.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:abulfadhwl_frontend/models/song.dart';
+import 'package:abulfadhwl_frontend/models/album.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:abulfadhwl_frontend/providers/songs_provider.dart';
+import 'package:downloads_path_provider/downloads_path_provider.dart';
+import 'package:abulfadhwl_frontend/constants/more_button_constants.dart';
+import 'package:abulfadhwl_frontend/views/other_pages/now_playing_screen_sheet.dart';
 
 typedef BottomSheetCallback = void Function();
 
@@ -26,7 +24,8 @@ class SongsList extends StatefulWidget {
     Key key,
     @required this.songs,
     @required this.title,
-    @required this.songProvider, @required this.initials,
+    @required this.songProvider,
+    @required this.initials,
   }) : super(key: key);
 
   @override
@@ -37,21 +36,19 @@ class _SongsListState extends State<SongsList> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   bool downloading = false;
   var progressString = "";
-  String _songUrl, _songFileName;
-  // int songId=0;
   BottomSheetCallback _showMyBottomSheetCallBack;
   Song playingSong;
+  int newIndex;
 
   @override
   void initState() {
     _showMyBottomSheetCallBack = _showBottomSheet;
+    widget.songProvider.initAudioPlayer();
     super.initState();
-
   }
 
   @override
   Widget build(BuildContext context) {
-    final _songObject = Provider.of<SongsProvider>(context);
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.orange[50],
@@ -75,39 +72,41 @@ class _SongsListState extends State<SongsList> {
           Expanded(
             child: widget.songs.isEmpty
                 ? Center(
-                    child: Text("Songs not yet available"),
+                    child: Text("Audio bado hazijawekwa"),
                   )
                 : Padding(
                     padding: const EdgeInsets.only(top: 5),
                     child: ListView.builder(
                       itemBuilder: (BuildContext context, int index) {
-                        // songId=index;
                         return Padding(
                           padding: const EdgeInsets.only(
                               left: 5, top: 1.5, right: 5),
                           child: InkWell(
+                            focusColor: Colors.blue,
+                            splashColor: Colors.red,
                             onTap: () {
-                              _songUrl = api +
-                                  'song/song_file/' +
-                                  widget.songs[index].id.toString();
-                              _songFileName = widget.songs[index].title;
-                              // _songDescription =
-                              //     widget.songs[index].songDescription;
-                              // playingSong = widget.songs[index];
-                              // songId=index;
-
-                              // playSong(
-                              //     "http://firqatunnajia.com/wp-content/uploads/2019/12/AUD-20191223-WA0003.mp3");
-                              // _songObject.stop();
-                              // _songObject.play(_songUrl);
+                              widget.songProvider.stop();
+                              widget.songProvider.play(api +
+                                  'song/file/' +
+                                  widget.songs[index].id.toString());
                               setState(() {
-                                _songObject.changePlayIcon = true;
+                                widget.songProvider.isPlaying;
+                                widget.songProvider.currentSongFile = api +
+                                    'song/file/' +
+                                    widget.songs[index].id.toString();
+                                widget.songProvider.currentSongTitle =
+                                    widget.songs[index].title;
+                                widget.songProvider.currentSongDescription =
+                                    widget.songs[index].description;
+                                newIndex = index;
                               });
                             },
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(3),
-                                color: Colors.orange[100],
+                                color: newIndex == index
+                                    ? Colors.orange[200]
+                                    : Colors.orange[100],
                               ),
                               child: Row(children: <Widget>[
                                 Icon(
@@ -128,52 +127,61 @@ class _SongsListState extends State<SongsList> {
                                           style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.deepPurple[800],
-                                              fontWeight: FontWeight.bold),
+                                              fontWeight: FontWeight.bold,
+                                              fontStyle: newIndex == index
+                                                  ? FontStyle.italic
+                                                  : FontStyle.normal),
                                         ),
                                         Text(
                                           widget.songs[index].description,
                                           style: TextStyle(
-                                              color: Colors.deepPurple,
+                                              color:  Colors.deepPurple,
                                               fontSize: 12,
-                                              fontStyle: FontStyle.italic),
+                                              fontStyle: newIndex == index
+                                                  ? FontStyle.italic
+                                                  : FontStyle.normal),
                                         )
                                       ],
                                     ),
                                   ),
                                 ),
                                 Container(
-                                    child: PopupMenuButton<String>(
-                                  icon: Icon(
-                                    Icons.more_vert,
-                                    color: Colors.orange[700],
-                                  ),
-                                  elevation: 10,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(5)),
-                                  color: Colors.orange[50],
-                                  onSelected: choiceAction,
-                                  itemBuilder: (_) {
-                                    // _songUrl =
-                                    //     "http://firqatunnajia.com/wp-content/uploads/2019/12/AUD-20191223-WA0003.mp3";
-                                    _songUrl = api +
-                                        'song/file/' +
-                                        widget.songs[index].id.toString();
-                                    _songFileName =
-                                        widget.songs[index].title;
-                                    return MoreButtonConstants.choices
-                                        .map((String choice) {
-                                      return PopupMenuItem<String>(
-                                        value: choice,
-                                        child: Text(
-                                          choice,
-                                          style: TextStyle(
-                                              color: Colors.deepPurple[800],
-                                              fontWeight: FontWeight.bold),
+                                  child: newIndex == index
+                                      ? Icon(
+                                          FontAwesomeIcons.play,
+                                          color: Colors.orange[700],
+                                        )
+                                      : PopupMenuButton<String>(
+                                          icon: Icon(
+                                            Icons.more_vert,
+                                            color: Colors.orange[700],
+                                          ),
+                                          elevation: 10,
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(5)),
+                                          color: Colors.orange[50],
+                                          onSelected: choiceAction,
+                                          itemBuilder: (_) {
+                                            widget.songProvider.songIndex =
+                                                index;
+                                            return MoreButtonConstants.choices
+                                                .map((String choice) {
+                                              return PopupMenuItem<String>(
+                                                value: choice,
+                                                child: Text(
+                                                  choice,
+                                                  style: TextStyle(
+                                                      color: Colors
+                                                          .deepPurple[800],
+                                                      fontWeight:
+                                                          FontWeight.bold),
+                                                ),
+                                              );
+                                            }).toList();
+                                          },
                                         ),
-                                      );
-                                    }).toList();
-                                  },
-                                ))
+                                )
                               ]),
                             ),
                           ),
@@ -210,7 +218,7 @@ class _SongsListState extends State<SongsList> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               Text(
-                                "widget.songs[songId].songTitle",
+                                widget.songProvider.currentSongTitle,
                                 maxLines: 1,
                                 style: TextStyle(
                                     fontSize: 15,
@@ -218,7 +226,7 @@ class _SongsListState extends State<SongsList> {
                                     fontWeight: FontWeight.bold),
                               ),
                               Text(
-                                "widget.songs[songId].songDescription",
+                                widget.songProvider.currentSongDescription,
                                 maxLines: 1,
                                 style: TextStyle(
                                     color: Colors.deepPurple,
@@ -230,31 +238,30 @@ class _SongsListState extends State<SongsList> {
                         ),
                       ),
                       Container(
-                        child: _songObject.changePlayIcon == false
+                        child: widget.songProvider.isPlaying
                             ? IconButton(
-                                icon: Icon(
-                                  FontAwesomeIcons.play,
-                                  size: 30,
-                                  color: Colors.orange[700],
-                                ),
-                                onPressed: () {
-                                  // _songObject.play(_songUrl);
-                                  setState(() {
-                                    _songObject.changePlayIcon =
-                                        !_songObject.changePlayIcon;
-                                  });
-                                })
-                            : IconButton(
                                 icon: Icon(
                                   FontAwesomeIcons.pause,
                                   size: 30,
                                   color: Colors.orange[700],
                                 ),
                                 onPressed: () {
-                                  // _songObject.pause();
+                                  widget.songProvider.pause();
                                   setState(() {
-                                    _songObject.changePlayIcon =
-                                        !_songObject.changePlayIcon;
+                                    widget.songProvider.isPaused;
+                                  });
+                                })
+                            : IconButton(
+                                icon: Icon(
+                                  FontAwesomeIcons.play,
+                                  size: 30,
+                                  color: Colors.orange[700],
+                                ),
+                                onPressed: () {
+                                  widget.songProvider.play(
+                                      widget.songProvider.currentSongFile);
+                                  setState(() {
+                                    widget.songProvider.isPlaying;
                                   });
                                 }),
                       ),
@@ -272,7 +279,11 @@ class _SongsListState extends State<SongsList> {
     });
     _scaffoldKey.currentState
         .showBottomSheet((context) {
-          return NowPlayingScreenSheet(playingSong: playingSong);
+          return NowPlayingScreenSheet(
+            playingSongTitle: widget.songProvider.currentSongTitle,
+            playingSongDescription: widget.songProvider.currentSongDescription,
+            playingSongFile: widget.songProvider.currentSongFile,
+          );
         })
         .closed
         .whenComplete(() {
@@ -286,15 +297,28 @@ class _SongsListState extends State<SongsList> {
 
   void choiceAction(String choice) {
     if (choice == MoreButtonConstants.PlayAudio) {
-      // widget.songProvider.stop();
-      // widget.songProvider.play(_songUrl);
+      widget.songProvider.stop();
+      widget.songProvider.play(api +
+          'song/file/' +
+          widget.songs[widget.songProvider.songIndex].id.toString());
       setState(() {
-        widget.songProvider.changePlayIcon = true;
+        newIndex = widget.songProvider.songIndex;
+        widget.songProvider.isPlaying;
+        widget.songProvider.currentSongTitle =
+            widget.songs[widget.songProvider.songIndex].title;
+        widget.songProvider.currentSongDescription =
+            widget.songs[widget.songProvider.songIndex].description;
       });
     } else if (choice == MoreButtonConstants.ShareAudio) {
-      Share.share(_songUrl);
+      Share.share(api +
+          'song/file/' +
+          widget.songs[widget.songProvider.songIndex].id.toString());
     } else
-      downloadFile(_songUrl, _songFileName);
+      downloadFile(
+          api +
+              'song/file/' +
+              widget.songs[widget.songProvider.songIndex].id.toString(),
+          widget.songs[widget.songProvider.songIndex].title);
   }
 
   Future<void> downloadFile(songUrl, songFileName) async {

@@ -1,8 +1,6 @@
 import 'package:abulfadhwl_frontend/views/initial_pages/animated_splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-
 import 'package:abulfadhwl_frontend/providers/songs_provider.dart';
 import 'package:abulfadhwl_frontend/providers/data_provider.dart';
 
